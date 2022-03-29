@@ -52,6 +52,14 @@ describe('agreement', () => {
       }
     });
 
+    const tx3 = await program.rpc.cancel({
+      accounts:{
+        contract: contractPDA,
+        destination: contractor.publicKey,
+      }
+    });
+    let balanceafterclose = await program.provider.connection.getBalance(contractPDA);
+    console.log(balanceafterclose* (10**-9));
 
   });
 });
