@@ -7,11 +7,12 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 pub mod agreement {
     use super::*;
     pub fn initialize(ctx: Context<Initialize>, amount_guranteed: u64, amount_total: u64) -> Result<()> {
-        ctx.accounts.contract.contractor = ctx.accounts.contractor.key();
-        ctx.accounts.contract.amount_guranteed = amount_guranteed;
-        ctx.accounts.contract.amount_total = amount_total;
-        ctx.accounts.contract.bump = *ctx.bumps.get("contract").unwrap();
-        ctx.accounts.contract.state = ContractState::Initialized;
+        let contract = &mut ctx.accounts.contract;
+        contract.contractor = ctx.accounts.contractor.key();
+        contract.amount_guranteed = amount_guranteed;
+        contract.amount_total = amount_total;
+        contract.bump = *ctx.bumps.get("contract").unwrap();
+        contract.state = ContractState::Initialized;
 
         let ix = anchor_lang::solana_program::system_instruction::transfer(
             &ctx.accounts.contractor.key(),
@@ -31,60 +32,43 @@ pub mod agreement {
     }
 
     pub fn update_amount(ctx: Context<Open>, amount_guranteed: u64, amount_total: u64) -> Result<()> {
-        match ctx.accounts.contract.state {
-            ContractState::Initialized |
-            ContractState::Open        |
-            ContractState::OpenTo      => (),
-            _ => return Err(AgreementError::ImmutableState.into()),
-        }
-        ctx.accounts.contract.amount_guranteed = amount_guranteed;
-        ctx.accounts.contract.amount_total = amount_total;
+        let contract = &mut ctx.accounts.contract;
+        contract.verify_state_init().ok();
+        contract.amount_guranteed = amount_guranteed;
+        contract.amount_total = amount_total;
         Ok(())
     }
 
+    //closes account, different than open
     pub fn cancel(ctx: Context<Cancel>) -> Result<()> {
-        match ctx.accounts.contract.state {
-            ContractState::Initialized |
-            ContractState::Open        |
-            ContractState::OpenTo      => (),
-            _ => return Err(AgreementError::ImmutableState.into()),
-        }
+        ctx.accounts.contract.verify_state_init().ok();
         Ok(())
     }
 
     pub fn open(ctx: Context<Open>) -> Result<()> {
-        match ctx.accounts.contract.state {
-            ContractState::Initialized |
-            ContractState::Open        |
-            ContractState::OpenTo      => (),
-            _ => return Err(AgreementError::ImmutableState.into()),
-        }
-        ctx.accounts.contract.state = ContractState::Open;
+        ctx.accounts.contract.verify_state_init().ok();
         Ok(())
     }
 
     pub fn open_to(ctx: Context<Open>, open_to: Pubkey) -> Result<()> {
-        match ctx.accounts.contract.state {
-            ContractState::Initialized |
-            ContractState::Open        |
-            ContractState::OpenTo      => (),
-            _ => return Err(AgreementError::ImmutableState.into()),
-        }
-        ctx.accounts.contract.state = ContractState::OpenTo;
-        ctx.accounts.contract.contractee = open_to;
+        let contract = &mut ctx.accounts.contract;
+        contract.verify_state_init().ok();
+        contract.state = ContractState::OpenTo;
+        contract.contractee = open_to;
         Ok(())
     }
 
     pub fn accept(ctx: Context<Accept>) -> Result<()> {
-        match ctx.accounts.contract.state {
+        let contract = &mut ctx.accounts.contract;
+        match contract.state {
             ContractState::Open => 
                 {
-                    ctx.accounts.contract.contractee = ctx.accounts.contractee.key();
-                    ctx.accounts.contract.state = ContractState::Accepeted;
+                    contract.contractee = ctx.accounts.contractee.key();
+                    contract.state = ContractState::Accepeted;
                 },
             ContractState::OpenTo => 
-                if ctx.accounts.contract.contractee == ctx.accounts.contractee.key(){
-                    ctx.accounts.contract.state = ContractState::Accepeted;
+                if contract.contractee == ctx.accounts.contractee.key(){
+                    contract.state = ContractState::Accepeted;
                 }
                 ,
             _ => return Err(AgreementError::InvalidAccount.into()),
@@ -102,7 +86,6 @@ pub mod agreement {
         ctx.accounts.contractee.to_account_info().lamports().checked_add(ctx.accounts.contract.amount_total).unwrap();
         **ctx.accounts.contract.to_account_info().lamports.borrow_mut() =
         ctx.accounts.contract.to_account_info().lamports().checked_sub(ctx.accounts.contract.amount_total).unwrap();
-
 
         Ok(())
     }
@@ -208,7 +191,16 @@ pub struct Contract {
 }
 
 impl Contract {
-    pub const MAXIMUM_SIZE: usize = 32 + 32 + 1 + 8 + 8 + (1 + 1);
+    pub const MAXIMUM_SIZE: usize = 32 + 32 + 8 + 8 + (1 + 1) + 1;
+
+    pub fn verify_state_init(&self) -> Result<()> {
+        match self.state {
+            ContractState::Initialized |
+            ContractState::Open        |
+            ContractState::OpenTo      => Ok(()),
+            _ => Err(AgreementError::ImmutableState.into()),
+        }
+    }
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq)]

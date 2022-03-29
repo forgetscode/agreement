@@ -54,7 +54,6 @@ describe('agreement', () => {
     let balanceafter = await program.provider.connection.getBalance(contractPDA);
     console.log(balanceafter* (10**-9));
 
-    /*
     const tx2 = await program.rpc.updateAmount(amount_gurantee, amount_total,{
       accounts:{
         contract: contractPDA,
@@ -62,8 +61,8 @@ describe('agreement', () => {
       }
     });
     console.log("Your transaction signature", tx2);
-    */
 
+    
     const tx3 = await program.rpc.open({
       accounts: {
         contract: contractPDA,
@@ -93,7 +92,7 @@ describe('agreement', () => {
 
     
 
-    const tx6 = await program.rpc.dispute({
+    const tx6 = await program.rpc.complete({
       accounts: {
         contract: contractPDA,
         contractee: contractee.publicKey,
@@ -104,10 +103,6 @@ describe('agreement', () => {
 
     let balanceafter2 = await program.provider.connection.getBalance(contractee.publicKey);
     console.log("contractee: ",balanceafter2* (10**-9));
-
-    
-    let balanceafter3 = await program.provider.connection.getBalance(contractor.publicKey);
-    console.log("contractor: ",balanceafter3* (10**-9));
 
   });
 });
