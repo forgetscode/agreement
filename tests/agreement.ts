@@ -13,23 +13,31 @@ describe('agreement', () => {
 
   const contractor = program.provider.wallet;
 
-  const bad = anchor.web3.Keypair.generate();
+  const contractee = anchor.web3.Keypair.generate();
 
   let amount_total = new anchor.BN(20* (1000000000));
   let amount_gurantee = new anchor.BN(10* (1000000000));
 
   it('Is initialized!', async () => {
-      const [contractPDA, _] = await PublicKey
+
+    const fromAirdropSignature = await program.provider.connection.requestAirdrop(
+          contractee.publicKey,
+          anchor.web3.LAMPORTS_PER_SOL,
+      )
+    await program.provider.connection.confirmTransaction(fromAirdropSignature);
+
+      const [contractPDA, _ ] = await PublicKey
       .findProgramAddress(
         [
-          anchor.utils.bytes.utf8.encode("contract-acc"),
+          anchor.utils.bytes.utf8.encode("contract_acc"),
           contractor.publicKey.toBuffer()
         ],
         program.programId
       );
-    let balancebefore = await program.provider.connection.getBalance(contractPDA);
-    console.log(balancebefore* (10**-9));
+    let balancebefore = await program.provider.connection.getBalance(contractee.publicKey);
+    console.log("contractee balance: ",balancebefore* (10**-9));
 
+    console.log(contractPDA.toBase58());
     // Add your test here.
     const tx = await program.rpc.initialize(amount_gurantee, amount_total,{
       accounts: {
@@ -40,26 +48,66 @@ describe('agreement', () => {
     });
     console.log("Your transaction signature", tx);
 
-    let _myAccountDataNew = await program.account.contract.fetch(contractPDA);
-    console.log(_myAccountDataNew);
+    const accounts = await program.provider.connection.getProgramAccounts(program.programId);
+    console.log("program accounts after init:", accounts[0].account.owner.toBase58());
+
     let balanceafter = await program.provider.connection.getBalance(contractPDA);
     console.log(balanceafter* (10**-9));
 
+    /*
     const tx2 = await program.rpc.updateAmount(amount_gurantee, amount_total,{
       accounts:{
         contract: contractPDA,
         contractor: contractor.publicKey,
       }
     });
+    console.log("Your transaction signature", tx2);
+    */
 
-    const tx3 = await program.rpc.cancel({
-      accounts:{
+    const tx3 = await program.rpc.open({
+      accounts: {
         contract: contractPDA,
-        destination: contractor.publicKey,
+        contractor: contractor.publicKey,
       }
     });
-    let balanceafterclose = await program.provider.connection.getBalance(contractPDA);
-    console.log(balanceafterclose* (10**-9));
+
+    
+    const tx4 = await program.rpc.openTo( contractee.publicKey , {
+      accounts: {
+        contract: contractPDA,
+        contractor: contractor.publicKey,
+      }
+    });
+    
+
+    let _myAccountDataNew = await program.account.contract.fetch(contractPDA);
+    console.log("account data after opento: ", _myAccountDataNew);
+
+    const tx5 = await program.rpc.accept({
+      accounts: {
+        contract: contractPDA,
+        contractee: contractee.publicKey,
+      },
+      signers:[contractee]
+    });
+
+    
+
+    const tx6 = await program.rpc.dispute({
+      accounts: {
+        contract: contractPDA,
+        contractee: contractee.publicKey,
+        destination: contractor.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      },
+    });
+
+    let balanceafter2 = await program.provider.connection.getBalance(contractee.publicKey);
+    console.log("contractee: ",balanceafter2* (10**-9));
+
+    
+    let balanceafter3 = await program.provider.connection.getBalance(contractor.publicKey);
+    console.log("contractor: ",balanceafter3* (10**-9));
 
   });
 });
