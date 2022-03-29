@@ -48,7 +48,12 @@ pub mod agreement {
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
-    #[account(init, payer = contractor, space = 8 + Contract::MAXIMUM_SIZE)]
+    #[account(
+        init,
+        payer = contractor,
+        space = 8 + Contract::MAXIMUM_SIZE,
+        seeds = [b"contract-acc", contractor.key().as_ref()], bump,
+    )]
     pub contract: Account<'info, Contract>,
     #[account(mut)]
     pub contractor: Signer<'info>,
@@ -63,14 +68,14 @@ pub struct UpdateAmount<'info> {
 
 #[derive(Accounts)]
 pub struct Cancel<'info> {
-    #[account(mut, close = destination)]
+    #[account(mut, seeds = [b"contract-acc", destination.key().as_ref()], bump = contract.bump , close = destination)]
     pub contract:  Account<'info, Contract>,
     pub destination: Signer<'info>,
 }
 
 
 impl Contract {
-    pub const MAXIMUM_SIZE: usize = 32 + 32 + 1 + 1 + (1 + 1);
+    pub const MAXIMUM_SIZE: usize = 32 + 32 + 1 + 1 + 1 + (1 + 1);
 
 }
 
@@ -82,6 +87,7 @@ pub struct Contract {
     amount_guranteed:  u8,  //1
     amount_total: u8,       //1
     state: ContractState,   //1 + 1
+    bump: u8                //1
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq)]
