@@ -13,7 +13,10 @@ describe('agreement', () => {
 
   const contractor = program.provider.wallet;
 
+  const bad = anchor.web3.Keypair.generate();
 
+  let amount_total = new anchor.BN(20* (1000000000));
+  let amount_gurantee = new anchor.BN(10* (1000000000));
 
   it('Is initialized!', async () => {
       const [contractPDA, _] = await PublicKey
@@ -24,9 +27,11 @@ describe('agreement', () => {
         ],
         program.programId
       );
+    let balancebefore = await program.provider.connection.getBalance(contractPDA);
+    console.log(balancebefore* (10**-9));
 
     // Add your test here.
-    const tx = await program.rpc.initialize(15, 15,{
+    const tx = await program.rpc.initialize(amount_gurantee, amount_total,{
       accounts: {
         contract: contractPDA,
         contractor: contractor.publicKey,
@@ -37,8 +42,16 @@ describe('agreement', () => {
 
     let _myAccountDataNew = await program.account.contract.fetch(contractPDA);
     console.log(_myAccountDataNew);
-    console.log(_myAccountDataNew.contractee);
+    let balanceafter = await program.provider.connection.getBalance(contractPDA);
+    console.log(balanceafter* (10**-9));
+
+    const tx2 = await program.rpc.updateAmount(amount_gurantee, amount_total,{
+      accounts:{
+        contract: contractPDA,
+        contractor: contractor.publicKey,
+      }
+    });
+
 
   });
-
 });
