@@ -6,11 +6,12 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 #[program]
 pub mod agreement {
     use super::*;
-    pub fn initialize(ctx: Context<Initialize>, amount_guranteed: u64, amount_total: u64) -> Result<()> {
+    pub fn initialize(ctx: Context<Initialize>, post_buffer:Pubkey, amount_guranteed: u64, amount_total: u64) -> Result<()> {
         let contract = &mut ctx.accounts.contract;
         contract.contractor = ctx.accounts.contractor.key();
         contract.amount_guranteed = amount_guranteed;
         contract.amount_total = amount_total;
+        contract.post_buffer = post_buffer;
         contract.bump = *ctx.bumps.get("contract").unwrap();
         contract.state = ContractState::Initialized;
 
@@ -27,7 +28,6 @@ pub mod agreement {
                 ctx.accounts.contract.to_account_info(),
             ],
         )?;
-        
         Ok(())
     }
 
@@ -108,15 +108,15 @@ pub mod agreement {
 }
 
 #[derive(Accounts)]
+#[instruction(post_buffer:Pubkey)]
 pub struct Initialize<'info> {
     #[account(
         init,
         payer = contractor,
         space = 8 + Contract::MAXIMUM_SIZE,
         constraint = contract.amount_guranteed <= contract.amount_total,
-        seeds = [b"contract_acc", contractor.key().as_ref()],
+        seeds = [b"contract_acc", contractor.key().as_ref(), post_buffer.key().as_ref()],
         bump,
-        
     )]
     pub contract: Account<'info, Contract>,
     #[account(mut)]
@@ -130,7 +130,7 @@ pub struct Open<'info> {
         mut,
         constraint = contractor.key() == contract.contractor.key(),
         constraint = contract.amount_guranteed <= contract.amount_total,
-        seeds = [b"contract_acc", contractor.key().as_ref()],
+        seeds = [b"contract_acc", contractor.key().as_ref(), contract.post_buffer.key().as_ref()],
         bump = contract.bump
     )]
     pub contract:  Account<'info, Contract>,
@@ -143,7 +143,7 @@ pub struct Cancel<'info> {
         mut, 
         constraint = contract.contractor.key() == destination.key(),
         close = destination,
-        seeds = [b"contract_acc", destination.key().as_ref()],
+        seeds = [b"contract_acc", destination.key().as_ref(), contract.post_buffer.key().as_ref()],
         bump = contract.bump
     )]
     pub contract:  Account<'info, Contract>,
@@ -155,7 +155,7 @@ pub struct Accept<'info> {
     #[account(
         mut,
         constraint = contract.contractor.key() != contractee.key(),
-        seeds = [b"contract_acc", contract.contractor.key().as_ref()],
+        seeds = [b"contract_acc", contract.contractor.key().as_ref(), contract.post_buffer.key().as_ref()],
         bump = contract.bump
     )]
     pub contract:  Account<'info, Contract>,
@@ -169,12 +169,11 @@ pub struct Complete<'info> {
         constraint = contract.contractor.key() == destination.key(),
         constraint = contract.contractee.key() == contractee.key(),
         close = destination,
-        seeds = [b"contract_acc", destination.key().as_ref()],
+        seeds = [b"contract_acc", destination.key().as_ref(), contract.post_buffer.key().as_ref()],
         bump = contract.bump
     )]
     pub contract:  Account<'info, Contract>,
-    #[account(
-        mut)]
+    #[account(mut)]
     pub contractee: SystemAccount<'info>,
     pub destination: Signer<'info>,
     pub system_program: Program<'info, System>,
@@ -187,11 +186,12 @@ pub struct Contract {
     amount_guranteed:  u64,  //8
     amount_total: u64,       //8
     state: ContractState,    //1 + 1
-    bump: u8                 //1
+    bump: u8,                //1
+    post_buffer:Pubkey       //32
 }
 
 impl Contract {
-    pub const MAXIMUM_SIZE: usize = 32 + 32 + 8 + 8 + (1 + 1) + 1;
+    pub const MAXIMUM_SIZE: usize = 32 + 32 + 8 + 8 + (1 + 1) + 1 + 32;
 
     pub fn verify_state_init(&self) -> Result<()> {
         match self.state {

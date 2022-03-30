@@ -3,6 +3,7 @@ import { Program } from '@project-serum/anchor';
 import { PublicKey, SystemProgram } from '@solana/web3.js';
 import { Agreement } from '../target/types/agreement';
 import { expect } from 'chai';
+import { exit } from 'process';
 
 describe('agreement', () => {
 
@@ -18,35 +19,40 @@ describe('agreement', () => {
   let amount_total = new anchor.BN(20* (1000000000));
   let amount_gurantee = new anchor.BN(10* (1000000000));
 
+  
+
   it('Is initialized!', async () => {
 
-    const fromAirdropSignature = await program.provider.connection.requestAirdrop(
-          contractee.publicKey,
-          anchor.web3.LAMPORTS_PER_SOL,
-      )
-    await program.provider.connection.confirmTransaction(fromAirdropSignature);
+      const buffer = anchor.web3.Keypair.generate();
 
       const [contractPDA, _ ] = await PublicKey
       .findProgramAddress(
         [
           anchor.utils.bytes.utf8.encode("contract_acc"),
-          contractor.publicKey.toBuffer()
+          contractor.publicKey.toBuffer(),
+          buffer.publicKey.toBuffer(),
         ],
         program.programId
       );
-    let balancebefore = await program.provider.connection.getBalance(contractee.publicKey);
-    console.log("contractee balance: ",balancebefore* (10**-9));
 
-    console.log(contractPDA.toBase58());
-    // Add your test here.
-    const tx = await program.rpc.initialize(amount_gurantee, amount_total,{
+    //(amount_gurantee, amount_total,
+
+    const tx = await program.rpc.initialize( amount_gurantee, amount_total, buffer.publicKey,  {
       accounts: {
         contract: contractPDA,
         contractor: contractor.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
       }
     });
+
+    /*
     console.log("Your transaction signature", tx);
+    let balancebefore = await program.provider.connection.getBalance(contractee.publicKey);
+    console.log("contractee balance: ",balancebefore* (10**-9));
+
+    console.log(contractPDA.toBase58());
+    // Add your test here.
+
 
     const accounts = await program.provider.connection.getProgramAccounts(program.programId);
     console.log("program accounts after init:", accounts[0].account.owner.toBase58());
@@ -54,6 +60,7 @@ describe('agreement', () => {
     let balanceafter = await program.provider.connection.getBalance(contractPDA);
     console.log(balanceafter* (10**-9));
 
+    
     const tx2 = await program.rpc.updateAmount(amount_gurantee, amount_total,{
       accounts:{
         contract: contractPDA,
@@ -92,6 +99,7 @@ describe('agreement', () => {
 
     
 
+    
     const tx6 = await program.rpc.complete({
       accounts: {
         contract: contractPDA,
@@ -103,6 +111,37 @@ describe('agreement', () => {
 
     let balanceafter2 = await program.provider.connection.getBalance(contractee.publicKey);
     console.log("contractee: ",balanceafter2* (10**-9));
-
+    */
   });
+
+  
+  it('second!', async () => {
+
+    const buffer2 = anchor.web3.Keypair.generate();
+
+    const [contractPDA, _ ] = await PublicKey
+    .findProgramAddress(
+      [
+        anchor.utils.bytes.utf8.encode("contract_acc"),
+        contractor.publicKey.toBuffer(),
+        buffer2.publicKey.toBuffer(),
+      ],
+      program.programId
+    );
+  console.log(contractPDA.toBase58());
+  // Add your test here.
+  const tx = await program.rpc.initialize(amount_gurantee, amount_total, buffer2.publicKey, {
+    accounts: {
+      contract: contractPDA,
+      contractor: contractor.publicKey,
+      systemProgram: anchor.web3.SystemProgram.programId,
+    }
+  });
+
+  const accounts = await program.provider.connection.getProgramAccounts(program.programId);
+  console.log("program accounts after init:", accounts.length);
+
+  console.log("Your transaction signature", tx);
+  });
+  
 });
