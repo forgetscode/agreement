@@ -1,9 +1,8 @@
 import * as anchor from '@project-serum/anchor';
 import { Program } from '@project-serum/anchor';
-import { PublicKey, SystemProgram } from '@solana/web3.js';
+import { PublicKey } from '@solana/web3.js';
 import { Agreement } from '../target/types/agreement';
 import { expect } from 'chai';
-import { exit } from 'process';
 
 describe('agreement', () => {
 
@@ -20,9 +19,9 @@ describe('agreement', () => {
   let amount_gurantee = new anchor.BN(10* (1000000000));
 
   
-
   it('Is initialized!', async () => {
 
+      //Save your buffer!
       const buffer = anchor.web3.Keypair.generate();
 
       const [contractPDA, _ ] = await PublicKey
@@ -35,9 +34,7 @@ describe('agreement', () => {
         program.programId
       );
 
-    //(amount_gurantee, amount_total,
-
-    const tx = await program.rpc.initialize( amount_gurantee, amount_total, buffer.publicKey,  {
+    const tx = await program.rpc.initialize(buffer.publicKey, amount_gurantee, amount_total,  {
       accounts: {
         contract: contractPDA,
         contractor: contractor.publicKey,
@@ -115,7 +112,7 @@ describe('agreement', () => {
   });
 
   
-  it('second!', async () => {
+  it('second account!', async () => {
 
     const buffer2 = anchor.web3.Keypair.generate();
 
@@ -128,9 +125,8 @@ describe('agreement', () => {
       ],
       program.programId
     );
-  console.log(contractPDA.toBase58());
-  // Add your test here.
-  const tx = await program.rpc.initialize(amount_gurantee, amount_total, buffer2.publicKey, {
+
+  const tx = await program.rpc.initialize(buffer2.publicKey, amount_gurantee, amount_total,  {
     accounts: {
       contract: contractPDA,
       contractor: contractor.publicKey,
@@ -138,10 +134,10 @@ describe('agreement', () => {
     }
   });
 
-  const accounts = await program.provider.connection.getProgramAccounts(program.programId);
-  console.log("program accounts after init:", accounts.length);
-
   console.log("Your transaction signature", tx);
+  const accounts = await program.provider.connection.getProgramAccounts(program.programId);
+  expect( accounts.length ==2 );
+
   });
   
 });
