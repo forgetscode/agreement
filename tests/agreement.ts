@@ -15,8 +15,8 @@ describe('agreement', () => {
 
   const contractee = anchor.web3.Keypair.generate();
 
-  let amount_total = new anchor.BN(20* (1000000000));
-  let amount_gurantee = new anchor.BN(10* (1000000000));
+  let amount_total = new anchor.BN(1* (1000000000));
+  let amount_gurantee = new anchor.BN(0.5* (1000000000));
 
   
   it('Is initialized!', async () => {

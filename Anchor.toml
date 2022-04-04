@@ -1,13 +1,13 @@
 [features]
 seeds = false
-[programs.localnet]
-agreement = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+[programs.devnet]
+agreement = "7Axu4X13PPv9gKnqDUwZVpF7R3dwwWJvZVJo7Rgt2oWW"
 
 [registry]
 url = "https://anchor.projectserum.com"
 
 [provider]
-cluster = "localnet"
+cluster = "devnet"
 wallet = "/home/forgets_code/.config/solana/id.json"
 
 [scripts]
